@@ -1,5 +1,59 @@
 package main
 
+import (
+	"context"
+	"fmt"
+	"time"
+)
+
+// родительский контекст
+func foo(ctx context.Context, n int) {
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("Foo завершилась :(", n)
+			return
+		default:
+			fmt.Println("Foo продолжает своё выполнение!", n)
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+// дочерний контекст
+func boo(ctx context.Context, n int) {
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("Boo завершилась :(", n)
+			return
+		default:
+			fmt.Println("Boo продолжает своё выполнение!", n)
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
 func main() {
-	// 3:54:18 2 ролик
+	parentContext, parentCancel := context.WithCancel(context.Background())
+	childContext, childCancel := context.WithCancel(parentContext)
+
+	go foo(parentContext, 1)
+	go foo(parentContext, 2)
+	go foo(parentContext, 3)
+
+	go boo(childContext, 1)
+	go boo(childContext, 2)
+	go boo(childContext, 3)
+
+	time.Sleep(1 * time.Second)
+	parentCancel() // отменяем родительский контекст
+
+	time.Sleep(1 * time.Second)
+	childCancel() // отменяем дочерний контекст
+
+	time.Sleep(3 * time.Second)
+	fmt.Println("main завершился!")
 }

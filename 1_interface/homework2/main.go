@@ -1,15 +1,26 @@
 package main
 
-/*
-- Вы разрабатываете систему отправки уведомлений через разные
- каналы связи:
-  - Email
-  - SMS
-  - Push-уведомления
-- Необходимо разработать модуль отправки уведомлений, который
- одним методом может принять массив уведомлений на отправку по различным
-  каналам связи, после чего, собственно, отправить все эти уведломления.
-- Вметсо настоящей отправки уведомлений необходимо использовать заглушки,
- на манер заглушек методов оплаты для модуля проведения оплат
-  из видео-урока.
-*/
+import (
+	"Study_REST_API/1_interface/homework2/connection"
+	"Study_REST_API/1_interface/homework2/connection/methods"
+)
+
+func main() {
+	// Создаём уведомления разных типов
+	email := methods.NewEmail("Привет! Это тестовое email.")
+	sms := methods.NewSMS("Привет! Это тестовое SMS.")
+	push := methods.NewPush("Привет! Это тестовое push-уведомление.")
+
+	// Срез уведомлений
+	notifications := []connection.NotificationSender{
+		email,
+		sms,
+		push,
+	}
+
+	// Отправляем все уведомления
+	connection.SendNotifications(notifications)
+
+	// Выводим информацию по уведомлениям
+	connection.PrintNotificationsInfo(notifications)
+}
