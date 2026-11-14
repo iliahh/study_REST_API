@@ -24,21 +24,36 @@ func data1(wg *sync.WaitGroup, box map[string]any) {
 	defer wg.Done()
 
 	// - ключом в хранилище является строка (строки-ключи ниже в кавычках)
-	mtx.Lock()
-	defer mtx.Unlock()
-	box["age"] = 25
-	box["name"] = "Ilya"
-	box["active"] = true
+	for i := 1; i <= 100_000; i++ {
+		mtx.Lock()
+		box["age"] = 25
+		box["name"] = "Ilya"
+		box["active"] = true
+		mtx.Unlock()
+	}
 }
 
 func data2(wg *sync.WaitGroup, box map[string]any) {
 	defer wg.Done()
 
-	mtx.Lock()
-	defer mtx.Unlock()
-	box["age"] = 23
-	box["name"] = "Senya"
-	box["active"] = false
+	for i := 1; i <= 100_000; i++ {
+		mtx.Lock()
+		box["age"] = 23
+		box["name"] = "Senya"
+		box["active"] = false
+		mtx.Unlock()
+	}
+}
+
+// горутина-читатель
+func readData(wg *sync.WaitGroup, box map[string]any) {
+	defer wg.Done()
+
+	for i := 1; i <= 100_000; i++ {
+		mtx.Lock()
+		_ = box["age"]
+		mtx.Unlock()
+	}
 }
 
 func main() {
@@ -48,20 +63,34 @@ func main() {
 
 	initTime := time.Now()
 
-	wg.Add(2)
-	go data1(wg, uniBox)
-	go data2(wg, uniBox)
+	for i := 1; i <= 10; i++ {
+		wg.Add(1)
+		go data1(wg, uniBox)
+	}
 
-	wg.Wait()
+	for i := 1; i <= 10; i++ {
+		wg.Add(1)
+		go data2(wg, uniBox)
+	}
+
+	for i := 1; i <= 10; i++ {
+		wg.Add(1)
+		go readData(wg, uniBox)
+	}
+
+	wg.Wait() // дождаться всех горутин-писателей и -читателей
 
 	fmt.Println(uniBox)
 
 	elapsed := time.Since(initTime)
 	fmt.Printf("Время выполнения: %.9f сек.\n", elapsed.Seconds())
 
-	// -> go run -race main.go
 	// map[active:false age:23 name:Senya]
-	// Время выполнения: 0.000515300 сек.
+	// Время выполнения: 0.128038800 сек.
+
+	// -> go run -race main.go
+	// map[active:true age:25 name:Ilya]
+	// Время выполнения: 0.914273000 сек.
 }
 */
 
@@ -73,21 +102,42 @@ func data1(wg *sync.WaitGroup, box map[string]any) {
 	defer wg.Done()
 
 	// - ключом в хранилище является строка (строки-ключи ниже в кавычках)
-	mtx.Lock()
-	defer mtx.Unlock()
-	box["age"] = 25
-	box["name"] = "Ilya"
-	box["active"] = true
+	for i := 1; i <= 100_000; i++ {
+		mtx.Lock()
+		// defer mtx.Unlock()
+
+		box["age"] = 25
+		box["name"] = "Ilya"
+		box["active"] = true
+		mtx.Unlock()
+	}
 }
 
 func data2(wg *sync.WaitGroup, box map[string]any) {
 	defer wg.Done()
 
-	mtx.Lock()
-	defer mtx.Unlock()
-	box["age"] = 23
-	box["name"] = "Senya"
-	box["active"] = false
+	for i := 1; i <= 100_000; i++ {
+		mtx.Lock()
+		// defer mtx.Unlock()
+
+		box["age"] = 23
+		box["name"] = "Senya"
+		box["active"] = false
+		mtx.Unlock()
+	}
+}
+
+// горутина-читатель
+func readData(wg *sync.WaitGroup, box map[string]any) {
+	defer wg.Done()
+
+	// для записи используются Lock/Unlock для записи,
+	// для чтения используется mtx.Rlock()/mtx.RUnlock()
+	for i := 1; i <= 100_000; i++ {
+		mtx.RLock()
+		_ = box["age"]
+		mtx.RUnlock()
+	}
 }
 
 func main() {
@@ -97,24 +147,34 @@ func main() {
 
 	initTime := time.Now()
 
-	wg.Add(2)
-	go data1(wg, uniBox)
-	go data2(wg, uniBox)
+	for i := 1; i <= 10; i++ {
+		wg.Add(1)
+		go data1(wg, uniBox)
+	}
 
-	wg.Wait()
+	for i := 1; i <= 10; i++ {
+		wg.Add(1)
+		go data2(wg, uniBox)
+	}
 
-	// для записи используются Lock/Unlock для записи,
-	// для чтения используется mtx.Rlock()/mtx.RUnlock()
-	mtx.RLock()
+	for i := 1; i <= 10; i++ {
+		wg.Add(1)
+		go readData(wg, uniBox)
+	}
+
+	wg.Wait() // дождаться всех горутин-писателей и -читателей
+
 	fmt.Println(uniBox)
-	mtx.RUnlock()
 
 	elapsed := time.Since(initTime)
 	fmt.Printf("Время выполнения: %.9f сек.\n", elapsed.Seconds())
 
+	// map[active:true age:25 name:Ilya]
+	// Время выполнения: 0.209301800 сек.
+
 	// -> go run -race main.go
-	// map[active:false age:23 name:Senya]
-	// Время выполнения: 0.000515700 сек.
+	// map[active:true age:25 name:Ilya]
+	// Время выполнения: 0.849453800 сек.
 }
 
 /*
@@ -140,3 +200,6 @@ func main() {
 		}
 	}
 */
+
+// в моем случае, замеряя время выполнения кода при использовании разных
+// примитивов синхронизации, Мьютекс оказался быстрее, чем РВМьютекс
