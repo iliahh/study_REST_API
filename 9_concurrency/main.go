@@ -1,5 +1,11 @@
 package main
 
+import "concurrency/miner"
+
 func main() {
-	// 5:24:41
+	coalTransferPoint := miner.MinerPool() // имя_пакета.Имя_функции_в_пакете
+
+	for v := range coalTransferPoint {
+
+	}
 }
