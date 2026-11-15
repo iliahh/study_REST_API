@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func Postman(
+func postman(
 	ctx context.Context,
 	wg *sync.WaitGroup,
 	transferPoint chan<- string,
@@ -26,10 +26,10 @@ func Postman(
 		default: // секция в дефаулте выполняется, пока контекст еще не отменён
 			fmt.Printf("Я почтальон №%d, взял письмо\n", n)
 			time.Sleep(1 * time.Second) // взяли и несём письмо
-			fmt.Printf("Я почтальон №%d, донёс письмо до почты: %s\n", n, mail)
+			fmt.Printf("Я почтальон №%d, донёс письмо до почты: '%s'\n", n, mail)
 
 			transferPoint <- mail
-			fmt.Printf("Я почтальон №%d, передал письмо : %s\n", n, mail)
+			fmt.Printf("Я почтальон №%d, передал письмо: '%s'\n", n, mail)
 		}
 	}
 }
@@ -44,7 +44,7 @@ func PostmanPool(ctx context.Context, postmanCount int) <-chan string {
 
 	for i := 1; i <= postmanCount; i++ {
 		wg.Add(1)
-		go Postman(ctx, wg, mailTransferPoint, i, postmanToMail(i))
+		go postman(ctx, wg, mailTransferPoint, i, postmanToMail(i))
 	}
 
 	go func() {

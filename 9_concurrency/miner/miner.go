@@ -13,7 +13,7 @@ import (
 значение только в сторону канала, и эта функция не сможет его забрать;
 -> n - номер шахтёра; power - количество добытого угля.
 */
-func Miner(
+func miner(
 	ctx context.Context,
 	wg *sync.WaitGroup,
 	transferPoint chan<- int,
@@ -48,7 +48,7 @@ func MinerPool(ctx context.Context, minerCount int) <-chan int {
 
 	for i := 1; i <= minerCount; i++ {
 		wg.Add(1)
-		go Miner(ctx, wg, coalTransferPoint, i, i*10)
+		go miner(ctx, wg, coalTransferPoint, i, i*10)
 	}
 
 	/*
