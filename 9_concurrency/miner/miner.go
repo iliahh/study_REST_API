@@ -22,18 +22,38 @@ func miner(
 	defer wg.Done()
 
 	for {
+		fmt.Printf("Я шахтёр №%d, начал добывать уголь!\n", n)
+
 		select {
 		case <-ctx.Done():
 			fmt.Printf("Я шахтёр №%d, мой рабочий день закончен!\n", n)
 			return
-		default: // секция в дефаулте выполняется, пока контекст еще не отменён
-			fmt.Printf("Я шахтёр №%d, начал добывать уголь!\n", n)
-			time.Sleep(1 * time.Second)
-			fmt.Printf("Я шахтёр №%d, добыл уголь!\n", n)
+		case <-time.After(1 * time.Second):
+			fmt.Printf("Я шахтёр №%d, добыл уголь: %d!\n", n, power)
+		}
 
-			transferPoint <- power
+		select {
+		case <-ctx.Done():
+			fmt.Printf("Я шахтёр №%d, мой рабочий день закончен!\n", n)
+			return
+		case transferPoint <- power:
 			fmt.Printf("Я шахтёр №%d, передал уголь в количестве %d шт.!\n", n, power)
 		}
+
+		/*
+			select {
+			case <-ctx.Done():
+				fmt.Printf("Я шахтёр №%d, мой рабочий день закончен!\n", n)
+				return
+			default: // секция в дефаулте выполняется, пока контекст еще не отменён
+				fmt.Printf("Я шахтёр №%d, начал добывать уголь!\n", n)
+				time.Sleep(1 * time.Second)
+				fmt.Printf("Я шахтёр №%d, добыл уголь!\n", n)
+
+				transferPoint <- power
+				fmt.Printf("Я шахтёр №%d, передал уголь в количестве %d шт.!\n", n, power)
+			}
+		*/
 	}
 }
 
